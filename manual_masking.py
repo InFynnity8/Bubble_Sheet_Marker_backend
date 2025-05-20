@@ -6,13 +6,19 @@ import imutils
 import os
 os.makedirs("output", exist_ok=True)
 
-# Load the image and preprocess
-image = cv2.imread('images/test_05.png')
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+# Load original image and mask
+image = cv2.imread("images/scannable.jpg")
+image = cv2.resize(image, (700, 1000))  # Ensure consistent size
+# gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+mask = cv2.imread("images/mask.png", 0)
+mask = cv2.resize(mask, (image.shape[1], image.shape[0]))
+masked = cv2.bitwise_and(image, image, mask=mask)
+cv2.imshow("Paper", masked)
+cv2.waitKey(0)
+
+gray = cv2.cvtColor(masked, cv2.COLOR_BGR2GRAY)
 blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 edged = cv2.Canny(blurred, 75, 200)
-cv2.imshow("Paper", edged)
-cv2.waitKey(0)
 
 # Find contours and locate the document
 cnts = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -47,18 +53,46 @@ cv2.waitKey(0)
 cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 cnts = imutils.grab_contours(cnts)
 questionCnts = []
+print(f"[INFO] Total contours found: {len(cnts)}")
+# Make a copy of the image to draw contours on
+contour_vis = cv2.cvtColor(thresh.copy(), cv2.COLOR_GRAY2BGR)
+
+# Draw all contours in blue
+cv2.drawContours(contour_vis, cnts, -1, (255, 0, 0), 1)
+
+# Display the image with contours
+cv2.imshow("All Contours on Threshold", contour_vis)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
 
 for c in cnts:
     (x, y, w, h) = cv2.boundingRect(c)
-    ar = w / float(h)
-    if w >= 20 and h >= 20 and 0.9 <= ar <= 1.1:
+    area = cv2.contourArea(c)
+    # Adjust thresholds as needed for your checkbox dimensions
+    if w >= 7 and h >= 7 and area >= 40 :
         questionCnts.append(c)
+        cv2.rectangle(paper, (x, y), (x + w, y + h), (0, 255, 0), 1)
+        cv2.imshow("Debug", paper)
+        cv2.waitKey(0)
+        # print("Area: ",area)
 
 # Sort the question contours top-to-bottom
 questionCnts = contours.sort_contours(questionCnts, method="top-to-bottom")[0]
 
 # Define the answer key
-ANSWER_KEY = {0: 1, 1: 4, 2: 0, 3: 3, 4: 1}
+ANSWER_KEY = {
+    0: 1, 1: 4, 2: 0, 3: 3, 4: 1,
+    5: 2, 6: 1, 7: 3, 8: 0, 9: 4,
+    10: 2, 11: 0, 12: 1, 13: 3, 14: 4,
+    15: 0, 16: 2, 17: 4, 18: 1, 19: 3,
+    20: 1, 21: 2, 22: 0, 23: 3, 24: 4,
+    25: 2, 26: 0, 27: 4, 28: 1, 29: 3,
+    30: 1, 31: 2, 32: 3, 33: 0, 34: 4,
+    35: 2, 36: 1, 37: 4, 38: 0, 39: 3,
+    40: 2, 41: 0, 42: 3, 43: 1, 44: 4,
+    45: 1, 46: 3, 47: 2, 48: 0, 49: 4
+}
+
 
 correct = 0
 
@@ -75,8 +109,12 @@ for (q, i) in enumerate(range(0, len(questionCnts), 5)):
         cv2.waitKey(0)
         print(j,total)
 
-        if bubbled is None or total > bubbled[0]:
+        if (bubbled is None or total > bubbled[0]) and total > 300:
             bubbled = (total, j)
+    if bubbled is None:
+        print("No bubble detected for question ", q+1)
+        bubbled = (0, -1)
+        continue
     print("Final Choice: ", bubbled[1])
 
     color = (0, 0, 255)
