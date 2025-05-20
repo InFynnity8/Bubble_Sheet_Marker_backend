@@ -3,7 +3,8 @@ import numpy as np
 from imutils.perspective import four_point_transform
 from imutils import contours
 import imutils
-
+import os
+os.makedirs("output", exist_ok=True)
 # Load the image and preprocess
 image = cv2.imread('images/test_01.png')
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -70,7 +71,25 @@ for (q, i) in enumerate(range(0, len(questionCnts), 5)):
         correct += 1
 
     cv2.drawContours(paper, [cnts[k]], -1, color, 3)
+    cv2.imshow("Sheet", paper)
+    cv2.waitKey(0)
+
 
 # Calculate the score
 score = (correct / 5.0) * 100
+cv2.putText(
+        paper,
+        f"Score: {score}%",
+        (10, 30),                          # position
+        cv2.FONT_HERSHEY_SIMPLEX,         # font
+        1.0,                               # scale
+        (255,0,0),                         # color (blue BGR)
+        2                                  # thickness
+    )
+
+# 6. Encode the annotated image to PNG bytes, then base64
+cv2.imshow("Result", paper)
+cv2.waitKey(0)
+cv2.imwrite("output/marked_bubbles.png", paper)
+
 print(f"Score: {score}%")
