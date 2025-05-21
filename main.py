@@ -412,6 +412,8 @@ def scan():
 
     file = request.files['file']
     # result = process_bubble_sheet(file.read())
+    with open("received_from_mobile.jpg", "wb") as f:
+        f.write(file.read())  # Save the file to inspect it
     result = manual_mask(file.read())
     return jsonify(result)
 
